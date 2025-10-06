@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 
 load_dotenv()
-
+api_key = os.getenv("OPENAI_API_KEY")
 CORS(app) 
 
-# ✅ Add your API key
+
 
 PDF_PATH = "Covision.pdf"
 
