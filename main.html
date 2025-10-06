@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .chat-container {
+      width: 420px;
+      height: 90vh;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .chat-header {
+      background: #4e54c8;
+      color: white;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chat-header img {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      background: white;
+      padding: 3px;
+    }
+    #chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    .message {
+      margin-bottom: 12px;
+      padding: 12px 18px;
+      border-radius: 20px;
+      max-width: 75%;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-in;
+    }
+    .user-message {
+      background: #d1e7dd;
+      margin-left: auto;
+      text-align: right;
+    }
+    .bot-message {
+      background: #e2d9f3;
+      margin-right: auto;
+      text-align: left;
+    }
+    .chat-input {
+      display: flex;
+      padding: 12px;
+      border-top: 1px solid #dee2e6;
+      background: white;
+    }
+    .chat-input input {
+      border: none;
+      padding: 12px;
+      flex: 1;
+      border-radius: 25px;
+      background: #f1f1f1;
+      outline: none;
+    }
+    .chat-input button {
+      margin-left: 10px;
+      border: none;
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      background: #4e54c8;
+      color: white;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .chat-input button:hover {
+      background: #3b40a4;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <!-- <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" alt="Bot"> -->
+      <span>Chatbot</span>
+    </div>
+    <div id="chat-box"></div>
+    <div class="chat-input">
+      <input type="text" id="message-input" placeholder="Type your message...">
+      <button id="send-btn">➤</button>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chat-box');
+    const input = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function addMessage(content, className) {
+      const msg = document.createElement('div');
+      msg.className = 'message ' + className;
+      msg.textContent = content;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+
+      addMessage(message, 'user-message');
+      input.value = '';
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/Chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message })
+        });
+
+        const data = await response.json();
+        if (data.ai_response) {
+          addMessage(data.ai_response, 'bot-message');
+        } else {
+          addMessage("⚠️ Error: " + (data.error || "No response"), 'bot-message');
+        }
+      } catch (err) {
+        addMessage("❌ Unable to reach server", 'bot-message');
+        console.error(err);
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+  </script>
+</body>
+</html>
