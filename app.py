@@ -12,7 +12,7 @@ app = Flask(__name__)
 load_dotenv()
 
 CORS(app) 
-
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # ✅ Add your API key
 
 PDF_PATH = "Covision.pdf"
