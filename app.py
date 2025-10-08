@@ -1,19 +1,38 @@
-from flask import Flask, request, jsonify, render_template
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from openai import OpenAI
-from flask_cors import CORS
 from PyPDF2 import PdfReader
 import numpy as np
 import faiss
 import os
 from dotenv import load_dotenv
-
-app = Flask(__name__)
+from fastapi.responses import JSONResponse, HTMLResponse
+app = FastAPI()
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-CORS(app) 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+api_key = os.getenv("OPENAI_API_KEY")
+print(api_key)
+print("🔍 Debug: Loaded API key value =", api_key)  # Shows the raw key
+if not api_key:
+    print("❌ API key not found! Make sure your .env file exists and has OPENAI_API_KEY set.")
+else:
+    print("✅ API key loaded successfully (starts with):", api_key)
+client = OpenAI(api_key=api_key)
+
+
 PDF_PATH = "Covision.pdf"
+
 
 def extract_text_from_pdf(pdf_path):
     reader = PdfReader(pdf_path)
@@ -39,12 +58,9 @@ def build_faiss_index(chunks):
         index.add(np.array([emb]).astype('float32'))
     return index, chunks
 
-print("📘 Loading and indexing PDF...")
 pdf_text = extract_text_from_pdf(PDF_PATH)
 chunks = chunk_text(pdf_text)
 index, chunks = build_faiss_index(chunks)
-print("✅ PDF loaded and indexed!")
-
 
 def search_similar_chunks(query, index, chunks, top_k=3):
     query_emb = np.array([get_embedding(query)]).astype('float32')
@@ -69,28 +85,28 @@ def ask_about_pdf(query, index, chunks):
     )
     return response.choices[0].message.content.strip()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
 
-@app.route('/Chat', methods=['POST', 'OPTIONS'])
-def chat_endpoint():
-    if request.method == 'OPTIONS':
-        # Handle browser preflight
-        return jsonify({'message': 'CORS preflight successful'}), 200
+class ChatRequest(BaseModel):
+    message: str
+
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    return "<h2>📘 Covision Chatbot (FastAPI Version)</h2><p>Use the /Chat endpoint to send messages.</p>"
+
+@app.post("/Chat")
+async def chat_endpoint(request: ChatRequest):
     try:
-        data = request.get_json()
-        if not data or 'message' not in data:
-            return jsonify({'error': 'Missing "message" parameter'}), 400
-        user_message = data['message']
-        if not user_message.strip():
-            return jsonify({'error': 'Message cannot be empty'}), 400
+        user_message = request.message.strip()
+        if not user_message:
+            return JSONResponse(content={"error": "Message cannot be empty"}, status_code=400)
+
         ai_response = ask_about_pdf(user_message, index, chunks)
-        return jsonify({'success': True, 'user_message': user_message, 'ai_response': ai_response})
+        return {"success": True, "user_message": user_message, "ai_response": ai_response}
     except Exception as e:
         print("❌ Backend error:", e)
-        return jsonify({'error': f'Error: {str(e)}'}), 500
+        return JSONResponse(content={"error": f"Error: {str(e)}"}, status_code=500)
 
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)
