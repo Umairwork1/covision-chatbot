@@ -20,19 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-api_key = os.getenv("OPENAI_API_KEY")
-print(api_key)
-print("🔍 Debug: Loaded API key value =", api_key)  # Shows the raw key
-if not api_key:
-    print("❌ API key not found! Make sure your .env file exists and has OPENAI_API_KEY set.")
-else:
-    print("✅ API key loaded successfully (starts with):", api_key)
-client = OpenAI(api_key=api_key)
-
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 PDF_PATH = "Covision.pdf"
-
 
 def extract_text_from_pdf(pdf_path):
     reader = PdfReader(pdf_path)
