@@ -115,7 +115,16 @@ from PyPDF2 import PdfReader
 import numpy as np
 import faiss
 import os
+# from dotenv import load_dotenv
+from dotenv import dotenv_values
 from fastapi.responses import JSONResponse, HTMLResponse
+
+# Load environment variables from .env
+# load_dotenv()
+
+config = dotenv_values(".env")  # loads all key-value pairs as a dictionary
+print("All values:", config)
+print("API Key:", config["OPENAI_API_KEY"])
 
 app = FastAPI()
 
@@ -128,8 +137,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize OpenAI client (latest SDK)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+client = OpenAI(api_key=config["OPENAI_API_KEY"])
+
 
 PDF_PATH = "Covision.pdf"
 
@@ -147,7 +157,10 @@ def chunk_text(text, max_length=800):
 
 # --- Embedding and FAISS ---
 def get_embedding(text):
-    response = client.embeddings.create(model="text-embedding-3-small", input=text)
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
     return response.data[0].embedding
 
 def build_faiss_index(chunks):
@@ -185,7 +198,8 @@ Question: {query}
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message.content.strip()
+    # ✅ Updated for OpenAI 2.x
+    return response.choices[0].message["content"].strip()
 
 # --- API Models ---
 class ChatRequest(BaseModel):
